@@ -105,7 +105,9 @@ If equal to:
     
 Used only on joiner. 1 implies rebuild indexes. Note that this is       
 independent of compaction, though compaction enables it. Rebuild of     
-indexes may be used as an optimization.                                 
+indexes may be used as an optimization. Note that :bug:`1192834`        
+affects this, hence use of ``compact`` and ``rebuild`` are recommended  
+after that is fixed in Percona Xtrabackup and released.                 
                              
 .. option:: time
 

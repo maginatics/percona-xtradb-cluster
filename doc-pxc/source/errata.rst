@@ -10,11 +10,11 @@ Known Issues
 Following are issues which may impact you while running PXC:
  - If the error log files are created inside datadir without the default '.err' extension (as set in my.cnf), they may be removed during SST. The workaround is to define the error log in my.cnf to be either outside datadir or with '.err' extension if inside. The default log is `hostname`.err, so it should be fine if not set in my.cnf.
  - bug :bug:`1226185`: percona-xtrabackup-20 may get installed as a dependency instead of latest percona-xtrabackup during a fresh install due to certain yum issues. Workaround is documented here - https://bugs.launchpad.net/percona-xtradb-cluster/+bug/1226185/comments/2.
- - bug :bug:`1192834`: Joiner may crash after SST from donor with compaction enabled. Workaround is to disable the index compaction (compact under [xtrabackup]), if enabled. This crash requires specific configuration, hence you may not be affected.
+ - bug :bug:`1192834`: Joiner may crash after SST from donor with compaction enabled. Workaround is to disable the index compaction (compact under [xtrabackup]), if enabled. This crash requires specific configuration, hence you may not be affected. Also, this doesn't require any fix from PXC, but Xtrabackup with the fix included should do.
  - bug :bug:`1217426`: When empty test directory is present on donor, it is not created on joiner, so when tables are created after SST on donor, the joiner later on will fail with inconsistency. Workaround is to either drop the test database or populate it with a table before SST. This is currently a limitation of Xtrabackup itself, hence, needs to be fixed there.
  - bug :bug:`1098566`: :variable:`innodb_data_home_dir` is not supported. Depends on bug :bug:`1164945` for the fix.
- - bug :bug:`1112363`: After debian upgrade, certain DDL will be replicated across nodes from the node where the upgrade took place and not work. This is fairly benign and shouldn't disrupt the service. The workaround is to 'touch /etc/mysql/NO-DEBIAN-START'. This also circumvents other debian-specific startup 'tasks' which can disrupt startup.
- - For Debian/Ubuntu users: |Percona XtraDB Cluster| :rn:`5.5.33-23.7.6` includes a new dependency, the ``socat`` package. If the ``socat`` is not previously installed, ``percona-xtradb-cluster-server-5.5`` may be held back. In order to upgrade, you need to either install ``socat`` before running the ``apt-get upgrade`` or by writing the following command: ``apt-get install percona-xtradb-cluster-server-5.5``. For *Ubuntu* users the ``socat`` package is in the universe repository, so the repository will have to be enabled in order to install the package.
+ - bug :bug:`1112363`: After debian upgrade, certain DDL will be replicated across nodes from the node where the upgrade took place and not work. This is fairly benign and shouldn't disrupt the service. The workaround is to 'touch /etc/mysql/NO-DEBIAN-START'. This also circumvents other debian-specific startup 'tasks' which can disrupt startup. This is going to be fixed in next release.
+ - For Debian/Ubuntu users: |Percona XtraDB Cluster| :rn:`5.5.33-23.7.6` onwards has a new dependency, the ``socat`` package. If the ``socat`` is not previously installed, ``percona-xtradb-cluster-server-5.5`` may be held back. In order to upgrade, you need to either install ``socat`` before running the ``apt-get upgrade`` or with the following command: ``apt-get install percona-xtradb-cluster-server-5.5``. For *Ubuntu* users the ``socat`` package is in the universe repository, so the repository will have to be enabled in order to install the package.
 
 
 Also make sure to check limitations page :ref:`here <limitations>`. You can also review this `milestone <https://launchpad.net/percona-xtradb-cluster/+milestone/future-5.5>`_ for features/bugfixes to be included in future releases (ie. releases after the upcoming/recent release).
@@ -25,7 +25,10 @@ New Behavior
 
 These may seem like bugs but they are not:
 
- - A startup after unclean stop will result in startup failing with '... lock file ...' exists. This is due to a stale lock file in /var/lock/subsys created by earlier startup (which failed). To 'fix' this just remove the lock file and start. This is due to a side-effect of the fix of bug :bug:`1211505`. This is intended to be the ideal behaviour since earlier the startup (even for PS/MySQL) didn't care for the stale lock file but instead just retouched it, giving the illusion of a clean stop earlier.
+ - A startup after unclean stop will result in startup failing with '... lock file ...' exists. This is due to a stale lock file in /var/lock/subsys created by earlier startup (which failed). To 'fix' this just remove the lock file and start. This is due to a side-effect of the fix of bug :bug:`1211505`. This is intended to be the ideal behaviour since earlier the startup (even for PS/MySQL) didn't care for the stale lock file but instead just retouched it, giving the illusion of a clean stop earlier. 
+
+.. note::
+    Update: This is being fixed in next `release <https://launchpad.net/percona-xtradb-cluster/+milestone/5.5.34-23.7.6>`_.
 
 
 Incompatibilities
