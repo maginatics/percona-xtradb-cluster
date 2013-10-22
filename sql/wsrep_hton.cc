@@ -87,6 +87,26 @@ void wsrep_register_hton(THD* thd, bool all)
 }
 
 /*
+  Calls wsrep->post_commit() for locally executed transactions that have
+  got seqno from provider (must commit) and don't require replaying.
+ */
+void wsrep_post_commit(THD* thd, bool all)
+{
+  if (thd->wsrep_exec_mode == LOCAL_STATE &&
+      thd->wsrep_conflict_state != MUST_REPLAY &&
+      thd->wsrep_trx_seqno != WSREP_SEQNO_UNDEFINED)
+  {
+    if (wsrep->post_commit(wsrep, &thd->wsrep_trx_handle))
+    {
+        DBUG_PRINT("wsrep", ("set committed fail"));
+        WSREP_WARN("set committed fail: %llu %d", 
+                   (long long)thd->real_id, thd->stmt_da->status());
+    }
+    wsrep_cleanup_transaction(thd);
+  }
+}
+
+/*
   wsrep exploits binlog's caches even if binlogging itself is not 
   activated. In such case connection close needs calling
   actual binlog's method.
@@ -217,12 +237,11 @@ int wsrep_commit(handlerton *hton, THD *thd, bool all)
     if (thd->ha_data[wsrep_hton->slot].ha_info[all].is_trx_read_write() &&
         thd->wsrep_trx_seqno != WSREP_SEQNO_UNDEFINED)
     {
-      if (wsrep->post_commit(wsrep, &thd->wsrep_trx_handle))
-      {
-        DBUG_PRINT("wsrep", ("set committed fail"));
-        WSREP_WARN("set committed fail: %llu %d", 
-                   (long long)thd->real_id, thd->stmt_da->status());
-      }
+      /*
+        Call to wsrep->post_commit() (moved to wsrep_post_commit()) must
+        be done only after commit has done for all involved htons.
+      */
+      DBUG_PRINT("wsrep", ("commit"));
     }
     else
     {
@@ -236,8 +255,8 @@ int wsrep_commit(handlerton *hton, THD *thd, bool all)
         WSREP_ERROR("settting rollback fail: thd: %llu SQL: %s", 
                     (long long)thd->real_id, thd->query());
       }
+      wsrep_cleanup_transaction(thd);
     }
-    wsrep_cleanup_transaction(thd);
   }
   mysql_mutex_unlock(&thd->LOCK_wsrep_thd);
   DBUG_RETURN(0);

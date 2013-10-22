@@ -310,7 +310,7 @@ wsrep_run_wsrep_commit(THD *thd, handlerton *hton, bool all);
 class Ha_trx_info;
 struct THD_TRANS;
 void wsrep_register_hton(THD* thd, bool all);
-
+void wsrep_post_commit(THD* thd, bool all);
 void wsrep_replication_process(THD *thd);
 void wsrep_rollback_process(THD *thd);
 void wsrep_brute_force_killer(THD *thd);
