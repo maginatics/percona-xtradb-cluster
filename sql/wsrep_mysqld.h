@@ -32,8 +32,7 @@ class THD;
   enum wsrep_exec_mode {
     LOCAL_STATE,
     REPL_RECV,
-    TOTAL_ORDER,
-    LOCAL_COMMIT,
+    TOTAL_ORDER
   };
   enum wsrep_query_state {
     QUERY_IDLE,
@@ -374,7 +373,7 @@ struct TABLE_LIST;
 int wsrep_to_isolation_begin(THD *thd, char *db_, char *table_,
                              const TABLE_LIST* table_list);
 void wsrep_to_isolation_end(THD *thd);
-
+void wsrep_cleanup_transaction(THD *thd);
 void wsrep_prepare_bf_thd(THD *thd, struct wsrep_thd_shadow*);
 void wsrep_return_from_bf_mode(THD *thd, struct wsrep_thd_shadow*);
 int wsrep_to_buf_helper(

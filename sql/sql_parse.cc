@@ -6037,6 +6037,9 @@ void wsrep_replay_transaction(THD *thd)
 	unireg_abort(1);
 	break;
       }
+
+      wsrep_cleanup_transaction(thd);
+
       mysql_mutex_lock(&LOCK_wsrep_replaying);
       wsrep_replaying--;
       WSREP_DEBUG("replaying decreased: %d, thd: %lu", 
@@ -8317,7 +8320,6 @@ int wsrep_thd_is_brute_force(void *thd_ptr)
     }
     case REPL_RECV:    return 1;
     case TOTAL_ORDER:  return 2;
-    case LOCAL_COMMIT: return 3;
     }
   }
   return 0;
