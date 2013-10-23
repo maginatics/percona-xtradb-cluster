@@ -32,7 +32,8 @@ class THD;
   enum wsrep_exec_mode {
     LOCAL_STATE,
     REPL_RECV,
-    TOTAL_ORDER
+    TOTAL_ORDER,
+    LOCAL_COMMIT
   };
   enum wsrep_query_state {
     QUERY_IDLE,
