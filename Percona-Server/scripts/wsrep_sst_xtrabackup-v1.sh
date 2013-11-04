@@ -54,7 +54,7 @@ pvformat="-F '%N => Rate:%r Avg:%a Elapsed:%t %e Bytes: %b %p' "
 pvopts="-f  -i 10 -N $WSREP_SST_OPT_ROLE "
 uextra=0
 
-if pv --help | grep -q FORMAT;then 
+if which pv &>/dev/null && pv --help | grep -q FORMAT;then 
     pvopts+=$pvformat
 fi
 pcmd="pv $pvopts"
@@ -137,6 +137,12 @@ get_keys()
 
 get_transfer()
 {
+    if [[ -z $SST_PORT ]];then 
+        TSST_PORT=4444
+    else 
+        TSST_PORT=$SST_PORT
+    fi
+
     if [[ $tfmt == 'nc' ]];then
         if [[ ! -x `which nc` ]];then 
             wsrep_log_error "nc(netcat) not found in path: $PATH"
@@ -144,9 +150,9 @@ get_transfer()
         fi
         wsrep_log_info "Using netcat as streamer"
         if [[ "$WSREP_SST_OPT_ROLE"  == "joiner" ]];then
-            tcmd="nc -dl ${SST_PORT}"
+            tcmd="nc -dl ${TSST_PORT}"
         else
-            tcmd="nc ${REMOTEIP} ${SST_PORT}"
+            tcmd="nc ${REMOTEIP} ${TSST_PORT}"
         fi
     else
         tfmt='socat'
@@ -169,16 +175,16 @@ get_transfer()
             fi
             if [[ "$WSREP_SST_OPT_ROLE"  == "joiner" ]];then
                 wsrep_log_info "Decrypting with PEM $tpem, CA: $tcert"
-                tcmd="socat -u openssl-listen:${SST_PORT},reuseaddr,cert=$tpem,cafile=${tcert}${sockopt} stdio"
+                tcmd="socat -u openssl-listen:${TSST_PORT},reuseaddr,cert=$tpem,cafile=${tcert}${sockopt} stdio"
             else
                 wsrep_log_info "Encrypting with PEM $tpem, CA: $tcert"
-                tcmd="socat -u stdio openssl-connect:${REMOTEIP}:${SST_PORT},cert=$tpem,cafile=${tcert}${sockopt}"
+                tcmd="socat -u stdio openssl-connect:${REMOTEIP}:${TSST_PORT},cert=$tpem,cafile=${tcert}${sockopt}"
             fi
         else 
             if [[ "$WSREP_SST_OPT_ROLE"  == "joiner" ]];then
-                tcmd="socat -u TCP-LISTEN:${SST_PORT},reuseaddr${sockopt} stdio"
+                tcmd="socat -u TCP-LISTEN:${TSST_PORT},reuseaddr${sockopt} stdio"
             else
-                tcmd="socat -u stdio TCP:${REMOTEIP}:${SST_PORT}${sockopt}"
+                tcmd="socat -u stdio TCP:${REMOTEIP}:${TSST_PORT}${sockopt}"
             fi
         fi
     fi
@@ -189,7 +195,7 @@ parse_cnf()
 {
     local group=$1
     local var=$2
-    reval=$(my_print_defaults -c $WSREP_SST_OPT_CONF $group | tr '_' '-' | grep -- "--$var=" | cut -d= -f2-)
+    reval=$(my_print_defaults -c $WSREP_SST_OPT_CONF $group | awk -F= '{if ($1 ~ /_/) { gsub(/_/,"-",$1); print $1"="$2 } else { print $0 }}' | grep -- "--$var=" | cut -d= -f2-)
     if [[ -z $reval ]];then 
         [[ -n $3 ]] && reval=$3
     fi
@@ -200,7 +206,7 @@ get_footprint()
 {
     pushd $WSREP_SST_OPT_DATA 1>/dev/null
     payload=$(du --block-size=1 -c  **/*.ibd **/*.MYI **/*.MYI ibdata1  | awk 'END { print $1 }')
-    if my_print_defaults -c $WSREP_SST_OPT_CONF xtrabackup | grep -q -- "--compress=";then 
+    if my_print_defaults -c $WSREP_SST_OPT_CONF xtrabackup | grep -q -- "--compress";then 
         # QuickLZ has around 50% compression ratio
         # When compression/compaction used, the progress is only an approximate.
         payload=$(( payload*1/2 ))
@@ -413,7 +419,7 @@ get_stream
 get_transfer
 
 INNOEXTRA=""
-INNOAPPLY="${INNOBACKUPEX_BIN} --defaults-file=${WSREP_SST_OPT_CONF} --redo-only --apply-log \$rebuildcmd \${DATA} &>\${DATA}/innobackup.prepare.log"
+INNOAPPLY="${INNOBACKUPEX_BIN} --defaults-file=${WSREP_SST_OPT_CONF} --apply-log \$rebuildcmd \${DATA} &>\${DATA}/innobackup.prepare.log"
 INNOBACKUP="${INNOBACKUPEX_BIN} --defaults-file=${WSREP_SST_OPT_CONF} \$INNOEXTRA --galera-info --stream=\$sfmt \${TMPDIR} 2>\${DATA}/innobackup.backup.log"
 
 if [ "$WSREP_SST_OPT_ROLE" = "donor" ]
