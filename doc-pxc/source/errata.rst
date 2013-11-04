@@ -21,7 +21,9 @@ Also make sure to check limitations page :ref:`here <limitations>`. You can also
 Major changes
 --------------- 
 
+Upgrading PXC 5.5.33 to 5.5.34 is strongly recommended due to:
  - An earlier incompatibility introduced in PXC 5.5.33 has been fixed. The newer xtrabackup SST is added as wsrep_sst_xtrabackup-v2 and can be enabled ``wsrep_sst_method=xtrabackup-v2``. wsrep_sst_xtrabackup-v2 is not compatible with wsrep_sst_xtrabackup. The default is xtrabackup (for compatibility reasons). Since, newer features are added only to xtrabackup-v2, it is recommended to use xtrabackup-v2 (to use new features) and use xtrabackup only when older nodes are present. Also note that, it is required to set wsrep_sst_method only on joiner, the donor is informed by galera about this on the other end. Also, note that, xtrabackup (not -v2) supports all the major options `here <http://www.percona.com/doc/percona-xtradb-cluster/manual/xtrabackup_sst.html>`_, any changes will be otherwise noted along with the option.
+ - Note that, this still means, if you are doing SST between a PXC 5.5.33 and PXC 5.5.34 node, due the above change, SST can fail, the workaround for this is to ``ln -s /usr/bin/wsrep_sst_xtrabackup /usr/bin/wsrep_sst_xtrabackup-v2`` on the donor node if it is 33,  ``ln -sf /usr/bin/wsrep_sst_xtrabackup-v2 /usr/bin/wsrep_sst_xtrabackup`` on the donor node if it is 34. But this is not recommended, especially the latter. Hence, all nodes with PXC 5.5.33 are strongly recommended to upgrade to PXC 5.5.34. 
 
 Incompatibilities
 -------------------
