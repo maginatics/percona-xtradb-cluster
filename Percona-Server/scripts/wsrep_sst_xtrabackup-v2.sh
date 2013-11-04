@@ -15,7 +15,7 @@
 # Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston
 # MA  02110-1301  USA.
 
-# Optional dependencies and options documented here: http://www.percona.com/doc/percona-xtradb-cluster/manual/xtrabackup_sst.html 
+# Documentation: http://www.percona.com/doc/percona-xtradb-cluster/manual/xtrabackup_sst.html 
 # Make sure to read that before proceeding!
 
 
@@ -34,6 +34,7 @@ SST_PORT=""
 REMOTEIP=""
 tcert=""
 tpem=""
+tkey=""
 sockopt=""
 progress=""
 ttime=0
@@ -42,6 +43,9 @@ lsn=""
 incremental=0
 ecmd=""
 rlimit=""
+# Initially
+stagemsg="${WSREP_SST_OPT_ROLE}"
+cpat=""
 
 sfmt="tar"
 strmcmd=""
@@ -52,6 +56,7 @@ rebuildcmd=""
 payload=0
 pvformat="-F '%N => Rate:%r Avg:%a Elapsed:%t %e Bytes: %b %p' "
 pvopts="-f  -i 10 -N $WSREP_SST_OPT_ROLE "
+STATDIR=""
 uextra=0
 
 if which pv &>/dev/null && pv --help | grep -q FORMAT;then 
@@ -95,7 +100,7 @@ timeit(){
 
 get_keys()
 {
-    if [[ $encrypt -eq 2 ]];then 
+    if [[ $encrypt -ge 2 ]];then 
         return 
     fi
 
@@ -133,6 +138,8 @@ get_keys()
     if [[ "$WSREP_SST_OPT_ROLE" == "joiner" ]];then
         ecmd+=" -d"
     fi
+
+    stagemsg+="-XB-Encrypted"
 }
 
 get_transfer()
@@ -162,17 +169,18 @@ get_transfer()
             exit 2
         fi
 
-        if [[ $encrypt -eq 2 ]] && ! socat -V | grep -q OPENSSL;then 
+        if [[ $encrypt -eq 2 || $encrypt -eq 3 ]] && ! socat -V | grep -q WITH_OPENSSL;then 
             wsrep_log_info "NOTE: socat is not openssl enabled, falling back to plain transfer"
             encrypt=0
         fi
 
         if [[ $encrypt -eq 2 ]];then 
-            wsrep_log_info "Using openssl based encryption with socat"
+            wsrep_log_info "Using openssl based encryption with socat: with crt and pem"
             if [[ -z $tpem || -z $tcert ]];then 
                 wsrep_log_error "Both PEM and CRT files required"
                 exit 22
             fi
+            stagemsg+="-OpenSSL-Encrypted-2"
             if [[ "$WSREP_SST_OPT_ROLE"  == "joiner" ]];then
                 wsrep_log_info "Decrypting with PEM $tpem, CA: $tcert"
                 tcmd="socat -u openssl-listen:${TSST_PORT},reuseaddr,cert=$tpem,cafile=${tcert}${sockopt} stdio"
@@ -180,6 +188,21 @@ get_transfer()
                 wsrep_log_info "Encrypting with PEM $tpem, CA: $tcert"
                 tcmd="socat -u stdio openssl-connect:${REMOTEIP}:${TSST_PORT},cert=$tpem,cafile=${tcert}${sockopt}"
             fi
+        elif [[ $encrypt -eq 3 ]];then
+            wsrep_log_info "Using openssl based encryption with socat: with key and crt"
+            if [[ -z $tpem || -z $tkey ]];then 
+                wsrep_log_error "Both certificate and key files required"
+                exit 22
+            fi
+            stagemsg+="-OpenSSL-Encrypted-3"
+            if [[ "$WSREP_SST_OPT_ROLE"  == "joiner" ]];then
+                wsrep_log_info "Decrypting with certificate $tpem, key $tkey"
+                tcmd="socat -u openssl-listen:${TSST_PORT},reuseaddr,cert=$tpem,key=${tkey},verify=0${sockopt} stdio"
+            else
+                wsrep_log_info "Encrypting with certificate $tpem, key $tkey"
+                tcmd="socat -u stdio openssl-connect:${REMOTEIP}:${TSST_PORT},cert=$tpem,key=${tkey},verify=0${sockopt}"
+            fi
+
         else 
             if [[ "$WSREP_SST_OPT_ROLE"  == "joiner" ]];then
                 tcmd="socat -u TCP-LISTEN:${TSST_PORT},reuseaddr${sockopt} stdio"
@@ -237,15 +260,17 @@ adjust_progress()
 
 read_cnf()
 {
-    sfmt=$(parse_cnf sst streamfmt "tar")
+    sfmt=$(parse_cnf sst streamfmt "xbstream")
     tfmt=$(parse_cnf sst transferfmt "socat")
     tcert=$(parse_cnf sst tca "")
     tpem=$(parse_cnf sst tcert "")
+    tkey=$(parse_cnf sst tkey "")
     encrypt=$(parse_cnf sst encrypt 0)
     sockopt=$(parse_cnf sst sockopt "")
     progress=$(parse_cnf sst progress "")
     rebuild=$(parse_cnf sst rebuild 0)
     ttime=$(parse_cnf sst time 0)
+    cpat=$(parse_cnf sst cpat '.*galera\.cache$\|.*sst_in_progress$\|.*grastate\.dat$\|.*\.err$\|.*\.log$\|.*RPM_UPGRADE_MARKER$\|.*RPM_UPGRADE_HISTORY$')
     incremental=$(parse_cnf sst incremental 0)
     ealgo=$(parse_cnf xtrabackup encrypt "")
     ekey=$(parse_cnf xtrabackup encrypt-key "")
@@ -268,15 +293,15 @@ get_stream()
         if [[ "$WSREP_SST_OPT_ROLE"  == "joiner" ]];then
             strmcmd="xbstream -x"
         else
-            strmcmd="xbstream -c \${INFO_FILE} \${IST_FILE}"
+            strmcmd="xbstream -c \${INFO_FILE}"
         fi
     else
         sfmt="tar"
         wsrep_log_info "Streaming with tar"
         if [[ "$WSREP_SST_OPT_ROLE"  == "joiner" ]];then
-            strmcmd="tar xfi - --recursive-unlink -h"
+            strmcmd="tar xfi - "
         else
-            strmcmd="tar cf - \${INFO_FILE} \${IST_FILE}"
+            strmcmd="tar cf - \${INFO_FILE} "
         fi
 
     fi
@@ -310,6 +335,9 @@ cleanup_joiner()
     if [[ -n $progress && -p $progress ]];then 
         wsrep_log_info "Cleaning up fifo file $progress"
         rm $progress
+    fi
+    if [[ -n ${STATDIR:-} ]];then 
+       [[ -d $STATDIR ]] && rm -rf $STATDIR
     fi
 }
 
@@ -377,7 +405,7 @@ wait_for_listen()
     if [[ $incremental -eq 1 ]];then 
         echo "ready ${ADDR}/${MODULE}/$lsn"
     else 
-    echo "ready ${ADDR}/${MODULE}"
+        echo "ready ${ADDR}/${MODULE}"
     fi
 }
 
@@ -401,6 +429,58 @@ check_extra()
     fi
 }
 
+recv_joiner()
+{
+    local dir=$1
+    local msg=$2 
+
+    pushd ${dir} 1>/dev/null
+    set +e
+    timeit "$msg" "$tcmd | $strmcmd; RC=( "\${PIPESTATUS[@]}" )"
+    set -e
+    popd 1>/dev/null 
+
+
+    for ecode in "${RC[@]}";do 
+        if [[ $ecode -ne 0 ]];then 
+            wsrep_log_error "Error while getting data from donor node: " \
+                            "exit codes: ${RC[@]}"
+            exit 32
+        fi
+    done
+
+    if [ ! -r "${MAGIC_FILE}" ];then
+        # this message should cause joiner to abort
+        wsrep_log_error "xtrabackup process ended without creating '${MAGIC_FILE}'"
+        wsrep_log_info "Contents of datadir" 
+        wsrep_log_info "$(ls -l ${dir}/*)"
+        exit 32
+    fi
+}
+
+
+send_donor()
+{
+    local dir=$1
+    local msg=$2 
+
+    pushd ${dir} 1>/dev/null
+    set +e
+    timeit "$msg" "$strmcmd | $tcmd; RC=( "\${PIPESTATUS[@]}" )"
+    set -e
+    popd 1>/dev/null 
+
+
+    for ecode in "${RC[@]}";do 
+        if [[ $ecode -ne 0 ]];then 
+            wsrep_log_error "Error while getting data from donor node: " \
+                            "exit codes: ${RC[@]}"
+            exit 32
+        fi
+    done
+
+}
+
 if [[ ! -x `which innobackupex` ]];then 
     wsrep_log_error "innobackupex not in path: $PATH"
     exit 2
@@ -419,7 +499,7 @@ get_stream
 get_transfer
 
 INNOEXTRA=""
-INNOAPPLY="${INNOBACKUPEX_BIN} --defaults-file=${WSREP_SST_OPT_CONF} --apply-log \$rebuildcmd \${DATA} &>\${DATA}/innobackup.prepare.log"
+INNOAPPLY="${INNOBACKUPEX_BIN} --defaults-file=${WSREP_SST_OPT_CONF}  --apply-log \$rebuildcmd \${DATA} &>\${DATA}/innobackup.prepare.log"
 INNOBACKUP="${INNOBACKUPEX_BIN} --defaults-file=${WSREP_SST_OPT_CONF} \$INNOEXTRA --galera-info --stream=\$sfmt \${TMPDIR} 2>\${DATA}/innobackup.backup.log"
 
 if [ "$WSREP_SST_OPT_ROLE" = "donor" ]
@@ -428,6 +508,7 @@ then
 
     if [ $WSREP_SST_OPT_BYPASS -eq 0 ]
     then
+
         TMPDIR="${TMPDIR:-/tmp}"
 
         if [ "${AUTH[0]}" != "(null)" ]; then
@@ -456,8 +537,19 @@ then
 
         check_extra
 
-        wsrep_log_info "Streaming the backup to joiner at ${REMOTEIP} ${SST_PORT}"
+        wsrep_log_info "Streaming GTID file before SST"
 
+        echo "${WSREP_SST_OPT_GTID}" > "${MAGIC_FILE}"
+
+        ttcmd="$tcmd"
+
+        if [[ $encrypt -eq 1 ]];then
+            tcmd="$ecmd | $tcmd"
+        fi
+
+        send_donor $DATA "${stagemsg}-gtid"
+
+        tcmd="$ttcmd"
         if [[ -n $progress ]];then 
             get_footprint
             tcmd="$pcmd | $tcmd"
@@ -466,8 +558,13 @@ then
             tcmd="$pcmd | $tcmd"
         fi
 
+        wsrep_log_info "Sleeping before data transfer for SST"
+        sleep 10
+
+        wsrep_log_info "Streaming the backup to joiner at ${REMOTEIP} ${SST_PORT:-4444}"
+
         set +e
-        timeit "Donor-Transfer" "$INNOBACKUP | $tcmd; RC=( "\${PIPESTATUS[@]}" )"
+        timeit "${stagemsg}-SST" "$INNOBACKUP | $tcmd; RC=( "\${PIPESTATUS[@]}" )"
         set -e
 
         if [ ${RC[0]} -ne 0 ]; then
@@ -486,27 +583,17 @@ then
     else # BYPASS FOR IST
 
         wsrep_log_info "Bypassing the SST for IST"
-        STATE="${WSREP_SST_OPT_GTID}"
         echo "continue" # now server can resume updating data
-        echo "${STATE}" > "${MAGIC_FILE}"
+        echo "${WSREP_SST_OPT_GTID}" > "${MAGIC_FILE}"
         echo "1" > "${DATA}/${IST_FILE}"
         get_keys
-        pushd ${DATA} 1>/dev/null
-        set +e
         if [[ $encrypt -eq 1 ]];then
             tcmd=" $ecmd | $tcmd"
         fi
-        timeit "Donor-IST-Unencrypted-transfer" "$strmcmd | $tcmd; RC=( "\${PIPESTATUS[@]}" )"
-        set -e
-        popd 1>/dev/null
+        strmcmd+=" \${IST_FILE}"
 
-        for ecode in "${RC[@]}";do 
-            if [[ $ecode -ne 0 ]];then 
-                wsrep_log_error "Error while streaming data to joiner node: " \
-                                "exit codes: ${RC[@]}"
-                exit 1
-            fi
-        done
+        send_donor $DATA "${stagemsg}-IST"
+
     fi
 
     echo "done ${WSREP_SST_OPT_GTID}"
@@ -515,7 +602,9 @@ then
 elif [ "${WSREP_SST_OPT_ROLE}" = "joiner" ]
 then
     [[ -e $SST_PROGRESS_FILE ]] && wsrep_log_info "Stale sst_in_progress file: $SST_PROGRESS_FILE"
-    touch $SST_PROGRESS_FILE
+    [[ -n $SST_PROGRESS_FILE ]] && touch $SST_PROGRESS_FILE
+
+    stagemsg="Joiner-Recv"
 
     if [[ ! -e ${DATA}/ibdata1 ]];then 
         incremental=0
@@ -532,6 +621,8 @@ then
     nthreads=1
 
     MODULE="xtrabackup_sst"
+
+    rm -f "${DATA}/${IST_FILE}"
 
     # May need xtrabackup_checkpoints later on
     rm -f ${DATA}/xtrabackup_binary ${DATA}/xtrabackup_galera_info  ${DATA}/xtrabackup_logfile
@@ -560,45 +651,13 @@ then
     fi
 
     get_keys
-    set +e
     if [[ $encrypt -eq 1 && $sencrypted -eq 1 ]];then
         strmcmd=" $ecmd | $strmcmd"
     fi
 
-    pushd ${DATA} 1>/dev/null
-    timeit "Joiner-Recv-Unencrypted" "$tcmd | $strmcmd; RC=( "\${PIPESTATUS[@]}" )"
-    popd 1>/dev/null 
-
-    set -e
-
-    if [[ $sfmt == 'xbstream' ]];then 
-        # Special handling till lp:1193240 is fixed"
-        if [[ ${RC[$(( ${#RC[@]}-1 ))]} -eq 1 ]];then 
-            wsrep_log_error "Xbstream failed"
-            wsrep_log_error "Data directory ${DATA} may not be empty: lp:1193240" \
-                            "Manual intervention required in that case"
-            exit 32
-        fi
-    fi
-
-    wait %% # join for wait_for_listen thread
-
-    for ecode in "${RC[@]}";do 
-        if [[ $ecode -ne 0 ]];then 
-            wsrep_log_error "Error while getting data from donor node: " \
-                            "exit codes: ${RC[@]}"
-            exit 32
-        fi
-    done
-
-    if [ ! -r "${MAGIC_FILE}" ]
-    then
-        # this message should cause joiner to abort
-        wsrep_log_error "xtrabackup process ended without creating '${MAGIC_FILE}'"
-        wsrep_log_info "Contents of datadir" 
-        wsrep_log_info "$(ls -l ${DATA}/**/*)"
-        exit 32
-    fi
+    STATDIR=$(mktemp -d)
+    MAGIC_FILE="${STATDIR}/${INFO_FILE}"
+    recv_joiner $STATDIR  "${stagemsg}-gtid" 1 
 
     if ! ps -p ${WSREP_SST_OPT_PARENT} &>/dev/null
     then
@@ -606,15 +665,20 @@ then
         exit 32
     fi
 
-    if [ ! -r "${DATA}/${IST_FILE}" ]
+    if [ ! -r "${STATDIR}/${IST_FILE}" ]
     then
         wsrep_log_info "Proceeding with SST"
-        wsrep_log_info "Removing existing ib_logfile files"
+
         if [[ $incremental -ne 1 ]];then 
-            rm -f ${DATA}/ib_logfile*
+            wsrep_log_info "Cleaning the existing datadir"
+            find $DATA -mindepth 1  -regex $cpat  -prune  -o -exec rm -rfv {} 1>&2 \+
         else
+            wsrep_log_info "Removing existing ib_logfile files"
             rm -f ${BDATA}/ib_logfile*
         fi
+
+        MAGIC_FILE="${DATA}/${INFO_FILE}"
+        recv_joiner $DATA "${stagemsg}-SST" 0 
 
         get_proc
 
@@ -654,12 +718,10 @@ then
                 dcmd="xargs -n 2 qpress -T${nproc}d"
             fi
 
-            wsrep_log_info "Removing existing ibdata1 file"
-            rm -f ${DATA}/ibdata1
 
             # Decompress the qpress files 
             wsrep_log_info "Decompression with $nproc threads"
-            timeit "Decompression" "find ${DATA} -type f -name '*.qp' -printf '%p\n%h\n' | $dcmd"
+            timeit "Joiner-Decompression" "find ${DATA} -type f -name '*.qp' -printf '%p\n%h\n' | $dcmd"
             extcode=$?
 
             if [[ $extcode -eq 0 ]];then
