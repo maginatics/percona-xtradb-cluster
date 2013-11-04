@@ -22,8 +22,14 @@ Major changes
 --------------- 
 
 Xtrabackup SST method compatibility notes:
- - This applies mainly, if your nodes are on **5.5.33** and backward compatibility was broken with **5.5.33** release wrt. SST. If you are upgrading from older (older than **5.5.33**) versions directly to **5.5.34**, then there shouldn't be an issue here.
- - An earlier incompatibility introduced in PXC **5.5.33** has been fixed. The newer xtrabackup SST is added (added in **5.5.34**) as wsrep_sst_xtrabackup-v2 and can be enabled ``wsrep_sst_method=xtrabackup-v2``. wsrep_sst_xtrabackup-v2 is not compatible with wsrep_sst_xtrabackup. The default is xtrabackup (for compatibility reasons). Since, newer features, henceforth, are added only to xtrabackup-v2, it is recommended to use xtrabackup-v2 (to use new features) and use xtrabackup only when older (older than **5.5.33**) nodes are present. Also, note that, xtrabackup should support all the major options `here <http://www.percona.com/doc/percona-xtradb-cluster/manual/xtrabackup_sst.html>`_, any v2 only options will be noted specifically (but much **older** PXCs like 5.5.27 may not support compression etc. but a basic xtrabackup SST should still work).
+ - **5.5.33** introduced an enhanced Xtrabackup method that broke backward compatibility of SST with older versions of PXC.  This is fixed in **5.5.34** by renaming the new method ``xtrabackup-v2``, with default still being ``xtrabackup`` for backward compatibility.  The following should be considered when upgrading:
+
+    - If you are upgrading from **5.5.32** and lower:  **5.5.34** Xtrabackup SST is backwards compatible.   It is recommended you skip **5.5.33** when upgrading.
+    - If you are upgrading from **5.5.33**: When upgrading, change your wsrep_sst_method=xtrabackup-v2 before restarting the **5.5.34** and up nodes
+
+    Once you are on **5.5.34** and up, you can migrate to the new method by changing your wsrep_method on all your nodes.  Note that the SST method of the Joiner is what is used when SST is needed, but the Donor must support the same method.
+
+ - Since, newer features, henceforth, are added only to xtrabackup-v2, it is recommended to use xtrabackup-v2 (to use new features) and use xtrabackup only when older (older than **5.5.33**) nodes are present. Also, note that, xtrabackup should support all the major options `here <http://www.percona.com/doc/percona-xtradb-cluster/manual/xtrabackup_sst.html>`_, any v2 only options will be noted specifically (but older versions of xtrabackup still won't support newer features like encryption, compression, hence wsrep_sst_method=xtrabackup is recommended only for basic SST and during upgrades to maintain compatibility).
  - So, if you are doing SST between a PXC **5.5.33** and PXC **5.5.34** node, due the above change, SST can fail, the workaround for this is to ``ln -s /usr/bin/wsrep_sst_xtrabackup /usr/bin/wsrep_sst_xtrabackup-v2`` on the donor node if it is 33 (and joiner is 34),  ``ln -sf /usr/bin/wsrep_sst_xtrabackup-v2 /usr/bin/wsrep_sst_xtrabackup`` on the donor node if it is 34 (and joiner is 33). But this is not recommended, especially the latter (strong discouraged). Hence, all nodes with PXC **5.5.33** are strongly recommended to upgrade to PXC **5.5.34** if SST backward compatibility is a concern.
 
 Incompatibilities
