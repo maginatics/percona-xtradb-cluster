@@ -51,7 +51,9 @@ Fixed the memory leak in the ``wsrep_write_cache()`` function. Bug fixed :bug:`1
 
 :ref:`xtrabackup_sst` implementation added in |Percona XtraDB Cluster| :rn:`5.5.33-23.7.6` has been renamed xtrabackup-v2, so :variable:`wsrep_sst_method` =xtrabackup will use xtrabackup implementation before :rn:`5.5.33-23.7.6` and will be compatible with older |Percona XtraDB Cluster| versions. Bug fixed :bug:`1228618`.
 
-Other bugs fixed: bug fixed :bug:`1244741`, bug fixed :bug:`1244667`, bug fixed :bug:`1243150`, bug fixed :bug:`1232890`, bug fixed :bug:`1235244`, bug fixed :bug:`999492`, bug fixed :bug:`1245769`, bug fixed :bug:`1244100`.
+Support for SSL encryption for just the key and crt files as implemented in `Galera <http://www.codership.com/wiki/doku.php?id=ssl_support>`_ can be enabled with ``encrypt=3`` option. This has been implemented in :rn:`5.5.34-23.7.6` for compatibility with Galera. Bug fixed :bug:`1235244`.
+
+Other bugs fixed: bug fixed :bug:`1244741`, bug fixed :bug:`1244667`, bug fixed :bug:`1243150`, bug fixed :bug:`1232890`, bug fixed :bug:`999492`, bug fixed :bug:`1245769`, bug fixed :bug:`1244100`.
  
 Based on `Percona Server 5.5.34-32.0 <http://www.percona.com/doc/percona-server/5.5/release-notes/Percona-Server-5.5.34-32.0.html>`_ including all the bug fixes in it, `Galera Replicator <https://launchpad.net/galera/+milestone/23.2.7>`_ and on `Codership wsrep API 5.5.34-25.9 <https://launchpad.net/codership-mysql/+milestone/5.5.34-25.9>`_, |Percona XtraDB Cluster| `5.5.34-23.7.6 <https://launchpad.net/percona-xtradb-cluster/+milestone/5.5.34-23.7.6>`_ is now the current stable release. All of |Percona|'s software is open-source and free. 
 
