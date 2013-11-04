@@ -54,7 +54,7 @@ pvformat="-F '%N => Rate:%r Avg:%a Elapsed:%t %e Bytes: %b %p' "
 pvopts="-f  -i 10 -N $WSREP_SST_OPT_ROLE "
 uextra=0
 
-if pv --help | grep -q FORMAT;then 
+if which pv &>/dev/null && pv --help | grep -q FORMAT;then 
     pvopts+=$pvformat
 fi
 pcmd="pv $pvopts"
