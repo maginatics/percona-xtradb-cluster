@@ -1,3 +1,9 @@
+percona-xtradb-cluster-5.5 (5.5.34-rel23.7.6) unstable; urgency=low
+ 
+  * Version bump 
+ 
+ -- Alexey Bychko <alexey.bychko@percona.com>  Fri, 25 Oct 2013 17:22:00 +0700
+
 percona-xtradb-cluster-5.5 (5.5.17-rel22.1) unstable; urgency=low
 
   * Update packaging for Percona XtraDB Cluster
