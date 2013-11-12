@@ -254,14 +254,13 @@ This variable contains settings currently used by Galera library.
 
 .. variable:: wsrep_recover
 
-   :cli: No
-   :conf: Yes
+   :cli: Yes
+   :conf: No
    :scope: Global
    :dyn: No
    :default: OFF
-   :location: mysqld_safe
 
-When server is started with this variable it will parse Global Transaction ID from log, and if the GTID is found, assign it as initial position for actual server start. This option is used to recover GTID.
+When server is started with this variable (as ``--wsrep-recover``) it will parse Global Transaction ID from log, and if the GTID is found, output to stderr (which usually goes into the log). This option is used to recover GTID, mysqld is called with this automatically in mysqld_safe, hence running this manually is not required, also no need to set it in my.cnf.
 
 .. variable:: wsrep_reject_queries
 
