@@ -9,6 +9,7 @@ Known Issues
 
 Following are issues which may impact you while running PXC:
  - wsrep_causal_reads being ON can introduce temporary stalls due to MDL lock conflicts.
+ - Create Table As Select (CTAS) can cause deadlocks and server hang when used with explicit TEMPORARY tables.
  - bug :bug:`1226185`: percona-xtrabackup-20 may get installed as a dependency instead of latest percona-xtrabackup during a fresh install due to certain yum issues. Workaround is documented here - https://bugs.launchpad.net/percona-xtradb-cluster/+bug/1226185/comments/2.
  - bug :bug:`1192834`: Joiner may crash after SST from donor with compaction enabled. Workaround is to disable the index compaction (compact under [xtrabackup]), if enabled. This crash requires specific configuration, hence you may not be affected. Also, this doesn't require any fix from PXC, but Xtrabackup with the fix included should do.
  - bug :bug:`1217426`: When empty test directory is present on donor, it is not created on joiner, so when tables are created after SST on donor, the joiner later on will fail with inconsistency. Workaround is to either drop the test database or populate it with a table before SST. This is currently a limitation of Xtrabackup itself, hence, needs to be fixed there.
