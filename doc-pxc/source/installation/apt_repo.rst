@@ -48,7 +48,7 @@ Install XtraDB Cluster
 Following command will install Cluster packages: :: 
 
   $ sudo apt-get install percona-xtradb-cluster-client-5.5 \
-  percona-xtradb-cluster-server-5.5 percona-xtrabackup
+  percona-xtradb-cluster-server-5.5 percona-xtrabackup percona-xtradb-cluster-galera-2.x
 
 Percona `apt` Experimental repository
 =====================================

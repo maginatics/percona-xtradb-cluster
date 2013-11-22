@@ -8,6 +8,7 @@ Known Issues
 -------------
 
 Following are issues which may impact you while running PXC:
+ - While installing for debian, you will need to explicitly specify percona-xtradb-cluster-galera-2.x since galera-3 is also available in apt repo now. This is not a bug. 
  - wsrep_causal_reads being ON can introduce temporary stalls due to MDL lock conflicts.
  - Create Table As Select (CTAS) can cause deadlocks and server hang when used with explicit TEMPORARY tables.
  - bug :bug:`1226185`: percona-xtrabackup-20 may get installed as a dependency instead of latest percona-xtrabackup during a fresh install due to certain yum issues. Workaround is documented here - https://bugs.launchpad.net/percona-xtradb-cluster/+bug/1226185/comments/2.

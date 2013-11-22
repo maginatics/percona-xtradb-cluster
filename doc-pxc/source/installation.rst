@@ -42,7 +42,7 @@ More detailed example of the |Percona XtraDB Cluster| installation and configura
 
 Once the repository is set up, use the following commands: ::
 
-  $ sudo apt-get install percona-xtradb-cluster-server-5.5 percona-xtradb-cluster-client-5.5
+  $ sudo apt-get install percona-xtradb-cluster-server-5.5 percona-xtradb-cluster-client-5.5 percona-xtradb-cluster-galera-2.x
 
 More detailed example of the |Percona XtraDB Cluster| installation and configuration can be seen in :ref:`ubuntu_howto` tutorial.
 
