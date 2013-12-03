@@ -14,8 +14,6 @@ New Features
 
  |Percona XtraDB Cluster| is now based on wsrep API 25 and Galera 25.2.x.
 
- Limited support for Query Cache has been implemented. Query cache cannot still be fully enabled during the startup. To enable query cache, ``mysqld`` should be started with ``query_cache_type=1`` and ``query_cache_size=0`` and then query_cache_size should be changed to desired value during runtime.
-
  ``RPM`` packages are now made `relocatable <http://rpm5.org/docs/api/relocatable.html>`_ which means they now support installation to custom prefixes.
 
  XtraBackup SST now supports :variable:`innodb_data_home_dir` and :variable:`innodb_log_home_dir` in the configuration file.
