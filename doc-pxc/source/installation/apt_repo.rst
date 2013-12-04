@@ -56,6 +56,8 @@ Following command will install Cluster packages: ::
  
    $ apt-get install percona-xtradb-cluster-galera-2.x percona-xtradb-cluster-server-5.5 percona-xtradb-cluster-client-5.5  
 
+   Also, during upgrade from  percona-xtradb-cluster-galera-2.x 162 (or anything higher than 158) it will warn of a downgrade, this is NORMAL, since latest package is percona-xtradb-cluster-galera-2.x 158 due to it being from a different tree.
+
 Percona `apt` Experimental repository
 =====================================
 
