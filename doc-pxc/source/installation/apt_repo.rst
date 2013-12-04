@@ -48,7 +48,13 @@ Install XtraDB Cluster
 Following command will install Cluster packages: :: 
 
   $ sudo apt-get install percona-xtradb-cluster-client-5.5 \
-  percona-xtradb-cluster-server-5.5 percona-xtrabackup percona-xtradb-cluster-galera-2.x
+  percona-xtradb-cluster-server-5.5 percona-xtradb-cluster-galera-2.x
+
+.. note:: 
+
+   When doing the package upgrade on debian, you need to specify the all the packages or do the ``dist-upgrade``, otherwise some packages will be held back during the upgrade: ::
+ 
+   $ apt-get install percona-xtradb-cluster-galera-2.x percona-xtradb-cluster-server-5.5 percona-xtradb-cluster-client-5.5  
 
 Percona `apt` Experimental repository
 =====================================
