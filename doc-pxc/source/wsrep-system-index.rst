@@ -225,8 +225,8 @@ This variable is used to set the notification `command <http://www.codership.com
 
 .. variable:: wsrep_on
 
-   :cli: Yes
-   :conf: Yes
+   :cli: No
+   :conf: No
    :scope: Local, Global
    :dyn: Yes
    :default: ON
