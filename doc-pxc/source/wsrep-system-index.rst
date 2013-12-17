@@ -357,7 +357,7 @@ This variable sets up the method for taking the State Snapshot Transfer (SST). A
 .. note:: 
     Note the following:
         * mysqldump SST is not recommended unless it is required for specific reasons. Also, it is not compatible with ``bind_address = 127.0.0.1 or localhost`` and will cause startup to fail if set so.
-        * rsync SST is currently recommended if you have innodb_log_group_home_dir in your cnf.
+        * Xtrabackup-v2 SST is currently recommended if you have innodb-log-group_home-dir/innodb-data-home-dir in your cnf. Refer to :option:`sst-special-dirs` for more.
 
 .. variable:: wsrep_sst_receive_address
 
