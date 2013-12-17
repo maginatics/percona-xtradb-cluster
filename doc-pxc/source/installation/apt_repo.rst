@@ -52,11 +52,9 @@ Following command will install Cluster packages: ::
 
 .. note:: 
 
-   When doing the package upgrade on debian, you need to specify the all the packages or do the ``dist-upgrade``, otherwise some packages will be held back during the upgrade: ::
+   When doing the package upgrade on debian, you may need to specify the all the packages on apt-get command-line or do the ``dist-upgrade``, otherwise some packages will be held back during the upgrade: ::
  
    $ apt-get install percona-xtradb-cluster-galera-2.x percona-xtradb-cluster-server-5.5 percona-xtradb-cluster-client-5.5  
-
-   Also, during upgrade from  percona-xtradb-cluster-galera-2.x 162 (or anything higher than 158) it may have warned of a downgrade earlier, this is NORMAL, since latest package (till sometime back) was percona-xtradb-cluster-galera-2.x 158 due to it being from a different tree. This has been fixed now by manually bumping the version to 163, so this confusion should no longer be there, ie. it should present as percona-xtradb-cluster-galera-2.x 162 (which is same as 158 sans the version bump).
 
 Percona `apt` Experimental repository
 =====================================
